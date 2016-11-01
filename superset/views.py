@@ -1703,23 +1703,9 @@ class Superset(BaseSupersetView):
 
     @api
     @has_access_api
-<<<<<<< 7a5bb947542fdc20e2ec70e18b1cf418b8d1dba8:superset/views.py
     @expose("/all_tables/<db_id>")
     def all_tables(self, db_id):
         """Endpoint that returns all tables and views from the database"""
-=======
-    @expose("/schemas/<db_id>")
-    @cached_view(timeout=600)
-    def schemas(self, db_id):
-        # db_id = request.args.get('db_id')
->>>>>>> Implement caching and dynamic data fetching.:caravel/views.py
-        database = (
-            db.session
-            .query(models.Database)
-            .filter_by(id=db_id)
-            .one()
-        )
-<<<<<<< 7a5bb947542fdc20e2ec70e18b1cf418b8d1dba8:superset/views.py
         all_tables = []
         all_views = []
         schemas = database.all_schema_names()
@@ -1732,20 +1718,24 @@ class Superset(BaseSupersetView):
 
         return Response(
             json.dumps({"tables": all_tables, "views": all_views}),
-=======
+
+    @expose("/schemas/<db_id>")
+    def schemas(self, db_id):
+        # db_id = request.args.get('db_id')
+        database = (
+            db.session
+            .query(models.Database)
+            .filter_by(id=db_id)
+            .one()
+        )
         return Response(
             json.dumps({'schemas': database.all_schema_names()}),
->>>>>>> Implement caching and dynamic data fetching.:caravel/views.py
             mimetype="application/json")
 
     @api
     @has_access_api
-<<<<<<< 7a5bb947542fdc20e2ec70e18b1cf418b8d1dba8:superset/views.py
-    @expose("/tables/<db_id>/<schema>")
-=======
     @expose("/tables/<db_id>/<schema>/")
     @cached_view(timeout=600)
->>>>>>> Implement caching and dynamic data fetching.:caravel/views.py
     def tables(self, db_id, schema):
         """endpoint to power the calendar heatmap on the welcome page"""
         schema = utils.js_string_to_python(schema)
@@ -1756,15 +1746,11 @@ class Superset(BaseSupersetView):
             .filter_by(id=db_id)
             .one()
         )
-<<<<<<< 7a5bb947542fdc20e2ec70e18b1cf418b8d1dba8:superset/views.py
-        tables = [t for t in database.all_table_names(schema) if
+        table_names = [t for t in database.all_table_names(schema) if
                   self.datasource_access_by_name(database, t, schema=schema)]
-        views = [v for v in database.all_table_names(schema) if
+        view_names = [v for v in database.all_table_names(schema) if
                  self.datasource_access_by_name(database, v, schema=schema)]
-        payload = {'tables': tables, 'views': views}
-=======
-        table_names = database.all_table_names(schema)
-        view_names = database.all_view_names(schema)
+
         if substr:
             table_names = [tn for tn in table_names if substr in tn]
             view_names = [vn for vn in view_names if substr in vn]
@@ -1783,7 +1769,6 @@ class Superset(BaseSupersetView):
             'views': view_names[:max_views],
             'views_length': len(view_names),
         }
->>>>>>> Implement caching and dynamic data fetching.:caravel/views.py
         return Response(
             json.dumps(payload), mimetype="application/json")
 

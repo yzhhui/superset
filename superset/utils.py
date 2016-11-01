@@ -20,7 +20,6 @@ import parsedatetime
 import sqlalchemy as sa
 from dateutil.parser import parse
 from flask import flash, Markup, request
-from flask_appbuilder.security.sqla import models as ab_models
 from markdown import markdown as md
 from sqlalchemy.types import TypeDecorator, TEXT
 from pydruid.utils.having import Having
