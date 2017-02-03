@@ -178,7 +178,7 @@ class BaseViz(object):
             for item in v:
                 ordered_data.add(key, item)
         href = Href(
-            '/caravel/filter/{self.datasource.type}/'
+            '/superset/filter/{self.datasource.type}/'
             '{self.datasource.id}/'.format(**locals()))
         return href(ordered_data)
 
@@ -360,8 +360,11 @@ class BaseViz(object):
             try:
                 data = self.get_data()
             except Exception as e:
+                logging.exception(e)
+                if not self.error_message:
+                    self.error_message = str(e)
+                self.status = utils.QueryStatus.FAILED
                 data = None
-
             payload = {
                 'cache_key': cache_key,
                 'cache_timeout': cache_timeout,
@@ -379,10 +382,7 @@ class BaseViz(object):
             payload['cached_dttm'] = datetime.now().isoformat().split('.')[0]
             logging.info("Caching for the next {} seconds".format(
                 cache_timeout))
-            data = json.dumps(
-                payload,
-                default=utils.json_int_dttm_ser, ignore_nan=True
-            )
+            data = self.json_dumps(payload)
             if PY3:
                 data = bytes(data, 'utf-8')
             try:
@@ -398,6 +398,9 @@ class BaseViz(object):
                 cache.delete(cache_key)
         payload['is_cached'] = is_cached
         return payload
+
+    def json_dumps(self, obj):
+        return json.dumps(obj, default=utils.json_int_dttm_ser, ignore_nan=True)
 
     @property
     def data(self):
@@ -537,6 +540,9 @@ class TableViz(BaseViz):
             records=df.to_dict(orient="records"),
             columns=list(df.columns),
         )
+
+    def json_dumps(self, obj):
+        return json.dumps(obj, default=utils.json_iso_dttm_ser)
 
 
 class PivotTableViz(BaseViz):
@@ -1328,6 +1334,13 @@ class NVD3DualLineViz(NVD3Viz):
 
         return df
 
+    def query_obj(self):
+        d = super(NVD3DualLineViz, self).query_obj()
+        if self.form_data.get('metric') == self.form_data.get('metric_2'):
+            raise Exception("Please choose different metrics"
+                            " on left and right axis")
+        return d
+
     def to_series(self, df, classed=''):
         cols = []
         for col in df.columns:
@@ -1501,7 +1514,8 @@ class HistogramViz(BaseViz):
     def query_obj(self):
         """Returns the query object for this visualization"""
         d = super(HistogramViz, self).query_obj()
-        d['row_limit'] = self.form_data.get('row_limit', int(config.get('ROW_LIMIT')))
+        d['row_limit'] = self.form_data.get(
+            'row_limit', int(config.get('VIZ_ROW_LIMIT')))
         numeric_column = self.form_data.get('all_columns_x')
         if numeric_column is None:
             raise Exception("Must have one numeric column specified")
